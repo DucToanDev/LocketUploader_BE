@@ -35,6 +35,9 @@ class LocketController {
                     images[0],
                     caption
                 );
+                return res.status(200).json({
+                    message: "Upload image successfully",
+                });
             } else {
                 if (videos[0].size > 10 * 1024 * 1024) {
                     return res.status(400).json({
@@ -42,17 +45,19 @@ class LocketController {
                     });
                 }
 
-                await locketService.postVideo(
+                const result = await locketService.postVideo(
                     userId,
                     idToken,
                     videos[0],
                     caption
                 );
+                
+                return res.status(200).json({
+                    message: "Upload video successfully",
+                    videoUrl: result.videoUrl,
+                    thumbnailUrl: result.thumbnailUrl
+                });
             }
-
-            return res.status(200).json({
-                message: "Upload image successfully",
-            });
         } catch (error) {
             next(error);
         }
