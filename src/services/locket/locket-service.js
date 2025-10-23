@@ -199,8 +199,8 @@ const uploadThumbnailFromVideo = async (userId, idToken, video) => {
         const thumbnailBytes = await videoService.thumbnailData(
             video.path,
             "jpeg",
-            128,
-            75
+            720,  // ← Increased from 128 to 720 (HD quality)
+            90    // ← Increased from 75 to 90 (better quality)
         );
 
         return await uploadImageToFirebaseStorage(
@@ -219,11 +219,17 @@ const uploadThumbnailFromVideo = async (userId, idToken, video) => {
  * @param {*} userId
  * @param {*} idToken
  * @param {Byte} video
+ * @param {String} mimeType - e.g. 'video/webm' or 'video/mp4'
  */
-const uploadVideoToFirebaseStorage = async (userId, idToken, video) => {
+const uploadVideoToFirebaseStorage = async (userId, idToken, video, mimeType = 'video/mp4') => {
     try {
-        const videoName = `${Date.now()}_vtd182.mp4`;
+        // ✨ Detect file extension from mimeType
+        const isWebM = mimeType.includes('webm');
+        const extension = isWebM ? 'webm' : 'mp4';
+        const videoName = `${Date.now()}_vtd182.${extension}`;
         const videoSize = video.length;
+
+        logInfo("uploadVideoToFirebaseStorage", `Uploading ${extension.toUpperCase()} (${(videoSize / 1024 / 1024).toFixed(2)}MB)`);
 
         // Giai đoạn 1: Khởi tạo quá trình upload, sẽ nhận lại được URL tạm thời để tải video lên
         const url = `https://firebasestorage.googleapis.com/v0/b/locket-video/o/users%2F${userId}%2Fmoments%2Fvideos%2F${videoName}?uploadType=resumable&name=users%2F${userId}%2Fmoments%2Fvideos%2F${videoName}`;
@@ -238,13 +244,13 @@ const uploadVideoToFirebaseStorage = async (userId, idToken, video) => {
             "x-firebase-storage-version": "ios/10.13.0",
             "user-agent":
                 "com.locket.Locket/1.43.1 iPhone/17.3 hw/iPhone15_3 (GTMSUF/1)",
-            "x-goog-upload-content-type": "video/mp4",
+            "x-goog-upload-content-type": mimeType, // ✨ Use actual mimeType
             "x-firebase-gmpid": "1:641029076083:ios:cc8eb46290d69b234fa609",
         };
 
         const data = JSON.stringify({
             name: `users/${userId}/moments/videos/${videoName}`,
-            contentType: "video/mp4",
+            contentType: mimeType, // ✨ Use actual mimeType
             bucket: "",
             metadata: { creator: userId, visibility: "private" },
         });
@@ -417,23 +423,86 @@ const postVideoToLocket = async (idToken, videoUrl, thumbnailUrl, caption) => {
 };
 
 const postVideo = async (userId, idToken, video, caption) => {
+    let convertedPath = null;
+    
     try {
         logInfo("postVideo", "Start");
-        const videoAsBuffer = fs.readFileSync(video.path);
+        
+        // ✨ Get video mime type from uploaded file
+        const videoMimeType = video.mimetype || 'video/mp4';
+        logInfo("postVideo", `Original format: ${videoMimeType}`);
+        
+        let finalVideoPath = video.path;
+        let finalMimeType = videoMimeType;
+        
+        // ✨ Convert WebM to MP4 for better compatibility
+        if (videoMimeType.includes('webm')) {
+            logInfo("postVideo", "🔄 Converting WebM → MP4...");
+            
+            convertedPath = video.path.replace(/\.\w+$/, '_converted.mp4');
+            
+            const ffmpeg = require('fluent-ffmpeg');
+            const ffmpegPath = require('ffmpeg-static');
+            ffmpeg.setFfmpegPath(ffmpegPath);
+            
+            await new Promise((resolve, reject) => {
+                ffmpeg(video.path)
+                    .output(convertedPath)
+                    .videoCodec('libx264')      // H.264 codec
+                    .audioCodec('aac')          // AAC audio
+                    .videoBitrate('1000k')      // 1 Mbps
+                    .size('1280x720')           // 720p max
+                    .format('mp4')
+                    .outputOptions([
+                        '-preset fast',         // Fast encoding
+                        '-movflags +faststart'  // Web optimization
+                    ])
+                    .on('start', (cmd) => {
+                        logInfo("postVideo", `FFmpeg command: ${cmd}`);
+                    })
+                    .on('progress', (progress) => {
+                        if (progress.percent) {
+                            logInfo("postVideo", `Conversion progress: ${Math.round(progress.percent)}%`);
+                        }
+                    })
+                    .on('end', () => {
+                        logInfo("postVideo", "✅ Conversion complete!");
+                        resolve();
+                    })
+                    .on('error', (err) => {
+                        logError("postVideo", `Conversion failed: ${err.message}`);
+                        reject(err);
+                    })
+                    .run();
+            });
+            
+            // Use converted MP4
+            finalVideoPath = convertedPath;
+            finalMimeType = 'video/mp4';
+            
+            logInfo("postVideo", "Using converted MP4 file");
+        }
+        
+        const videoAsBuffer = fs.readFileSync(finalVideoPath);
+        logInfo("postVideo", `Final video size: ${(videoAsBuffer.length / 1024 / 1024).toFixed(2)}MB`);
+        
+        // Extract thumbnail from final video
         const thumbnailUrl = await uploadThumbnailFromVideo(
             userId,
             idToken,
-            video
+            convertedPath ? { path: convertedPath } : video
         );
 
         if (!thumbnailUrl) {
             throw new Error("Failed to upload thumbnail");
         }
 
+        // Upload video with correct mimeType
         const videoUrl = await uploadVideoToFirebaseStorage(
             userId,
             idToken,
-            videoAsBuffer
+            videoAsBuffer,
+            finalMimeType
         );
 
         if (!videoUrl) {
@@ -453,7 +522,19 @@ const postVideo = async (userId, idToken, video, caption) => {
         logError("postVideo", error.message);
         throw error;
     } finally {
-        fs.unlinkSync(video.path);
+        // Cleanup: Delete both original and converted files
+        try {
+            if (fs.existsSync(video.path)) {
+                fs.unlinkSync(video.path);
+                logInfo("postVideo", "Deleted original file");
+            }
+            if (convertedPath && fs.existsSync(convertedPath)) {
+                fs.unlinkSync(convertedPath);
+                logInfo("postVideo", "Deleted converted file");
+            }
+        } catch (cleanupError) {
+            logError("postVideo", `Cleanup error: ${cleanupError.message}`);
+        }
     }
 };
 
