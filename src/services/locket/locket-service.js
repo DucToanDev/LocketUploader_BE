@@ -443,6 +443,12 @@ const postVideo = async (userId, idToken, video, caption) => {
         await postVideoToLocket(idToken, videoUrl, thumbnailUrl, caption);
 
         logInfo("postVideo", "End");
+        
+        // Return URLs for external API consumers
+        return {
+            videoUrl,
+            thumbnailUrl
+        };
     } catch (error) {
         logError("postVideo", error.message);
         throw error;
