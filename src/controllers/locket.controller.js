@@ -64,11 +64,30 @@ class LocketController {
                     });
                 }
 
+                // Parse music_track if present (same as image)
+                let musicData = null;
+                if (music_track) {
+                    try {
+                        musicData = typeof music_track === 'string' ? JSON.parse(music_track) : music_track;
+                    } catch (e) {
+                        console.warn('Failed to parse music_track:', e);
+                    }
+                }
+                
+                const overlayOptions = {
+                    caption,
+                    color_top: color_top || '#000000',
+                    color_bottom: color_bottom || '#000000',
+                    text_color: text_color || '#FFFFFF',
+                    overlay_type: overlay_type || 'default',
+                    music_track: musicData
+                };
+
                 const result = await locketService.postVideo(
                     userId,
                     idToken,
                     videos[0],
-                    caption
+                    overlayOptions
                 );
                 
                 return res.status(200).json({
