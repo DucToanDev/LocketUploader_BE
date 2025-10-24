@@ -13,7 +13,7 @@ class LocketController {
 
     async uploadMedia(req, res, next) {
         try {
-            const { userId, idToken, caption } = req.body;
+            const { userId, idToken, caption, color_top, color_bottom, text_color, overlay_type, music_track } = req.body;
             const { images, videos } = req.files;
 
             if (!images && !videos) {
@@ -29,11 +29,30 @@ class LocketController {
             }
 
             if (images) {
+                // Parse music_track if present
+                let musicData = null;
+                if (music_track) {
+                    try {
+                        musicData = typeof music_track === 'string' ? JSON.parse(music_track) : music_track;
+                    } catch (e) {
+                        console.warn('Failed to parse music_track:', e);
+                    }
+                }
+                
+                const overlayOptions = {
+                    caption,
+                    color_top: color_top || '#000000',
+                    color_bottom: color_bottom || '#000000',
+                    text_color: text_color || '#FFFFFF',
+                    overlay_type: overlay_type || 'default',
+                    music_track: musicData
+                };
+                
                 await locketService.postImage(
                     userId,
                     idToken,
                     images[0],
-                    caption
+                    overlayOptions
                 );
                 return res.status(200).json({
                     message: "Upload image successfully",
