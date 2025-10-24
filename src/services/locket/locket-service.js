@@ -557,11 +557,11 @@ const postVideo = async (userId, idToken, video, caption) => {
                     .audioCodec('aac')          // AAC audio
                     // ✨ NO SIZE LIMIT - Keep original resolution!
                     // If you want to limit: .size('1920x1080')
-                    .videoBitrate('3000k')      // 3 Mbps for high quality
+                    .videoBitrate('2000k')      // 2 Mbps (reduced from 3000k for faster encode)
                     .format('mp4')
                     .outputOptions([
-                        '-preset medium',       // Balance speed/quality
-                        '-crf 21',              // High quality (lower = better, 18=near-lossless)
+                        '-preset veryfast',     // ⚡ Fast encoding (was 'medium')
+                        '-crf 23',              // Good quality (was 21, higher = faster but lower quality)
                         '-profile:v high',      // H.264 high profile
                         '-level 4.1',           // Compatibility level
                         '-pix_fmt yuv420p',     // Color format for compatibility
