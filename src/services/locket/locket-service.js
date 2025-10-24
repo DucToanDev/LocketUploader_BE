@@ -428,8 +428,18 @@ const postVideoToLocket = async (idToken, videoUrl, thumbnailUrl, overlayOptions
         const musicTrack = overlayOptions?.music_track;
         
         logInfo("postVideoToLocket", "Start");
+        logInfo("postVideoToLocket", `overlayOptions: ${JSON.stringify(overlayOptions, null, 2)}`);
+        
         if (musicTrack) {
-            logInfo("postVideoToLocket", `Video with music: ${musicTrack.trackName || musicTrack.name}`);
+            logInfo("postVideoToLocket", `✅ Video HAS music`);
+            logInfo("postVideoToLocket", `   - musicTrack keys: ${Object.keys(musicTrack).join(', ')}`);
+            logInfo("postVideoToLocket", `   - Full musicTrack: ${JSON.stringify(musicTrack, null, 2)}`);
+            logInfo("postVideoToLocket", `   - trackName: ${musicTrack.trackName}`);
+            logInfo("postVideoToLocket", `   - artistName: ${musicTrack.artistName}`);
+            logInfo("postVideoToLocket", `   - apple_music_url: ${musicTrack.apple_music_url}`);
+            logInfo("postVideoToLocket", `   - previewUrl: ${musicTrack.previewUrl}`);
+        } else {
+            logInfo("postVideoToLocket", `⚠️ Video NO music (musicTrack is null/undefined)`);
         }
         
         const postHeaders = {
