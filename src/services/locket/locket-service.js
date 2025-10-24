@@ -184,20 +184,22 @@ const postImage = async (userId, idToken, image, overlayOptions) => {
                 apple_music_url: musicTrack.trackViewUrl
             };
             
+            // Add ISRC if available
+            if (musicTrack.isrc) {
+                musicPayload.isrc = musicTrack.isrc;
+            }
+            
             overlays.push({
                 data: {
                     text: caption,
-                    text_color: hexToRGBA(overlayOptions.text_color || '#FFFFFF', 0.9),
+                    text_color: "#FFFFFFE6",  // Fixed alpha like user's example
                     type: "music",
                     max_lines: 1,
                     payload: musicPayload,
                     icon: { type: "image", data: musicTrack.artworkUrl, source: "url" },
-                    background: {
-                        material_blur: "ultra_thin",
-                        colors: [
-                            hexToRGBA(overlayOptions.color_top || '#FF6B81', 0.9),
-                            hexToRGBA(overlayOptions.color_bottom || '#FF9A76', 0.9)
-                        ]
+                    background: { 
+                        material_blur: "ultra_thin", 
+                        colors: []  // Empty array for music overlay
                     }
                 },
                 alt_text: caption,
