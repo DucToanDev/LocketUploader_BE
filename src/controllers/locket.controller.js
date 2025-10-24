@@ -34,8 +34,20 @@ class LocketController {
                 if (music_track) {
                     try {
                         musicData = typeof music_track === 'string' ? JSON.parse(music_track) : music_track;
+                        
+                        // 🔧 FIX: Handle double JSON encoding (frontend sends stringified JSON)
+                        if (typeof musicData === 'string') {
+                            console.log('⚠️ [IMAGE] musicData is still a string, parsing again...');
+                            musicData = JSON.parse(musicData);
+                        }
+                        
+                        console.log('✅ [IMAGE] Parsed musicData:', {
+                            trackName: musicData.trackName,
+                            artistName: musicData.artistName,
+                            apple_music_url: musicData.apple_music_url
+                        });
                     } catch (e) {
-                        console.warn('Failed to parse music_track:', e);
+                        console.warn('❌ Failed to parse music_track:', e);
                     }
                 }
                 
@@ -69,6 +81,13 @@ class LocketController {
                 if (music_track) {
                     try {
                         musicData = typeof music_track === 'string' ? JSON.parse(music_track) : music_track;
+                        
+                        // 🔧 FIX: Handle double JSON encoding (frontend sends stringified JSON)
+                        if (typeof musicData === 'string') {
+                            console.log('⚠️ [VIDEO] musicData is still a string, parsing again...');
+                            musicData = JSON.parse(musicData);
+                        }
+                        
                         console.log('✅ [VIDEO] Parsed musicData:', JSON.stringify(musicData, null, 2));
                         console.log('   - trackName:', musicData.trackName);
                         console.log('   - artistName:', musicData.artistName);
