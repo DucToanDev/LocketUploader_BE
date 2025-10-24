@@ -145,7 +145,7 @@ const uploadImageToFirebaseStorage = async (userId, idToken, image) => {
     }
 };
 
-const postImage = async (userId, idToken, image, caption) => {
+const postImage = async (userId, idToken, image, overlayOptions) => {
     try {
         logInfo("postImage", "Start");
         const imageUrl = await uploadImageToFirebaseStorage(
@@ -154,16 +154,94 @@ const postImage = async (userId, idToken, image, caption) => {
             image
         );
 
-        // Tạo bài viết mới
+        // Tạo bài viết mới với overlays
         const postHeaders = {
             "Content-Type": "application/json",
             Authorization: `Bearer ${idToken}`,
         };
 
+        const caption = overlayOptions.caption || '';
+        const musicTrack = overlayOptions.music_track;
+        
+        // Build overlays array
+        const overlays = [];
+        
+        // Add music overlay if present
+        if (musicTrack && musicTrack.previewUrl) {
+            const hexToRGBA = (hex, alpha = 1.0) => {
+                hex = hex.replace('#', '');
+                const r = parseInt(hex.substr(0, 2), 16);
+                const g = parseInt(hex.substr(2, 2), 16);
+                const b = parseInt(hex.substr(4, 2), 16);
+                const alphaHex = Math.round(alpha * 255).toString(16).padStart(2, '0');
+                return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}${alphaHex}`.toUpperCase();
+            };
+            
+            const musicPayload = {
+                preview_url: musicTrack.previewUrl,
+                song_title: musicTrack.trackName,
+                artist: musicTrack.artistName,
+                apple_music_url: musicTrack.trackViewUrl
+            };
+            
+            overlays.push({
+                data: {
+                    text: caption,
+                    text_color: hexToRGBA(overlayOptions.text_color || '#FFFFFF', 0.9),
+                    type: "music",
+                    max_lines: 1,
+                    payload: musicPayload,
+                    icon: { type: "image", data: musicTrack.artworkUrl, source: "url" },
+                    background: {
+                        material_blur: "ultra_thin",
+                        colors: [
+                            hexToRGBA(overlayOptions.color_top || '#FF6B81', 0.9),
+                            hexToRGBA(overlayOptions.color_bottom || '#FF9A76', 0.9)
+                        ]
+                    }
+                },
+                alt_text: caption,
+                overlay_id: "caption:music",
+                overlay_type: "caption"
+            });
+        } else {
+            // Default or custom color overlay
+            const hexToRGBA = (hex, alpha = 1.0) => {
+                hex = hex.replace('#', '');
+                const r = parseInt(hex.substr(0, 2), 16);
+                const g = parseInt(hex.substr(2, 2), 16);
+                const b = parseInt(hex.substr(4, 2), 16);
+                const alphaHex = Math.round(alpha * 255).toString(16).padStart(2, '0');
+                return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}${alphaHex}`.toUpperCase();
+            };
+            
+            const hasCustomColors = overlayOptions.color_top !== '#000000' || overlayOptions.color_bottom !== '#000000';
+            
+            overlays.push({
+                data: {
+                    text: caption,
+                    text_color: hexToRGBA(overlayOptions.text_color || '#FFFFFF', 0.9),
+                    type: "default",
+                    max_lines: 4,
+                    background: {
+                        material_blur: "ultra_thin",
+                        colors: hasCustomColors ? [
+                            hexToRGBA(overlayOptions.color_top, 0.9),
+                            hexToRGBA(overlayOptions.color_bottom, 0.9)
+                        ] : []
+                    }
+                },
+                alt_text: caption,
+                overlay_id: "caption:default",
+                overlay_type: "caption"
+            });
+        }
+
         const postData = JSON.stringify({
             data: {
                 thumbnail_url: imageUrl,
                 caption: caption,
+                overlays: overlays,
                 sent_to_all: true,
             },
         });
@@ -450,11 +528,16 @@ const postVideo = async (userId, idToken, video, caption) => {
                     .output(convertedPath)
                     .videoCodec('libx264')      // H.264 codec
                     .audioCodec('aac')          // AAC audio
-                    .videoBitrate('1000k')      // 1 Mbps
-                    .size('1280x720')           // 720p max
+                    // ✨ NO SIZE LIMIT - Keep original resolution!
+                    // If you want to limit: .size('1920x1080')
+                    .videoBitrate('3000k')      // 3 Mbps for high quality
                     .format('mp4')
                     .outputOptions([
-                        '-preset fast',         // Fast encoding
+                        '-preset medium',       // Balance speed/quality
+                        '-crf 21',              // High quality (lower = better, 18=near-lossless)
+                        '-profile:v high',      // H.264 high profile
+                        '-level 4.1',           // Compatibility level
+                        '-pix_fmt yuv420p',     // Color format for compatibility
                         '-movflags +faststart'  // Web optimization
                     ])
                     .on('start', (cmd) => {
