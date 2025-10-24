@@ -208,9 +208,13 @@ const postImage = async (userId, idToken, image, overlayOptions) => {
             if (musicTrack.spotify_url || musicTrack.spotifyUrl) {
                 musicPayload.spotify_url = musicTrack.spotify_url || musicTrack.spotifyUrl;
                 logInfo("postImage", "Using Spotify URL");
-            } else if (musicTrack.apple_music_url || musicTrack.appleMusicUrl) {
-                // ✅ ĐÚNG: Dùng apple_music_url từ frontend (đã set = previewUrl)
-                musicPayload.apple_music_url = musicTrack.apple_music_url || musicTrack.appleMusicUrl;
+            } else {
+                // ✅ ALWAYS set apple_music_url from previewUrl for Apple Music
+                // Frontend should set apple_music_url = previewUrl, but fallback just in case
+                musicPayload.apple_music_url = musicTrack.apple_music_url 
+                    || musicTrack.appleMusicUrl 
+                    || musicTrack.previewUrl 
+                    || musicTrack.preview_url;
                 logInfo("postImage", "Using Apple Music URL: " + musicPayload.apple_music_url);
             }
             
@@ -463,9 +467,13 @@ const postVideoToLocket = async (idToken, videoUrl, thumbnailUrl, overlayOptions
             if (musicTrack.spotify_url || musicTrack.spotifyUrl) {
                 musicPayload.spotify_url = musicTrack.spotify_url || musicTrack.spotifyUrl;
                 logInfo("postVideoToLocket", "Using Spotify URL");
-            } else if (musicTrack.apple_music_url || musicTrack.appleMusicUrl) {
-                // ✅ ĐÚNG: Dùng apple_music_url từ frontend (đã set = previewUrl)
-                musicPayload.apple_music_url = musicTrack.apple_music_url || musicTrack.appleMusicUrl;
+            } else {
+                // ✅ ALWAYS set apple_music_url from previewUrl for Apple Music
+                // Frontend should set apple_music_url = previewUrl, but fallback just in case
+                musicPayload.apple_music_url = musicTrack.apple_music_url 
+                    || musicTrack.appleMusicUrl 
+                    || musicTrack.previewUrl 
+                    || musicTrack.preview_url;
                 logInfo("postVideoToLocket", "Using Apple Music URL: " + musicPayload.apple_music_url);
             }
             
