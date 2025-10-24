@@ -69,9 +69,16 @@ class LocketController {
                 if (music_track) {
                     try {
                         musicData = typeof music_track === 'string' ? JSON.parse(music_track) : music_track;
+                        console.log('✅ [VIDEO] Parsed musicData:', JSON.stringify(musicData, null, 2));
+                        console.log('   - trackName:', musicData.trackName);
+                        console.log('   - artistName:', musicData.artistName);
+                        console.log('   - apple_music_url:', musicData.apple_music_url);
+                        console.log('   - previewUrl:', musicData.previewUrl);
                     } catch (e) {
-                        console.warn('Failed to parse music_track:', e);
+                        console.warn('❌ Failed to parse music_track:', e);
                     }
+                } else {
+                    console.log('⚠️ [VIDEO] No music_track in request body');
                 }
                 
                 const overlayOptions = {
