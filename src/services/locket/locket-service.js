@@ -204,13 +204,13 @@ const postImage = async (userId, idToken, image, overlayOptions) => {
                 artist: musicTrack.artistName || musicTrack.artist
             };
             
-            // 🎵 Add music URL - Ưu tiên Spotify, fallback Apple Music
+            // 🎵 Chỉ thêm khi có giá trị (theo code mẫu)
             if (musicTrack.spotify_url || musicTrack.spotifyUrl) {
                 musicPayload.spotify_url = musicTrack.spotify_url || musicTrack.spotifyUrl;
                 logInfo("postImage", "Using Spotify URL");
-            } else if (musicTrack.trackViewUrl || musicTrack.apple_music_url || musicTrack.appleMusicUrl) {
-                // ✅ Ưu tiên trackViewUrl (từ iTunes Search API)
-                musicPayload.apple_music_url = musicTrack.trackViewUrl || musicTrack.apple_music_url || musicTrack.appleMusicUrl;
+            } else if (musicTrack.apple_music_url || musicTrack.appleMusicUrl) {
+                // ✅ ĐÚNG: Dùng apple_music_url từ frontend (đã set = previewUrl)
+                musicPayload.apple_music_url = musicTrack.apple_music_url || musicTrack.appleMusicUrl;
                 logInfo("postImage", "Using Apple Music URL: " + musicPayload.apple_music_url);
             }
             
