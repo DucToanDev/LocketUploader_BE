@@ -196,27 +196,42 @@ const postImage = async (userId, idToken, image, overlayOptions) => {
                 return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}${alphaHex}`.toUpperCase();
             };
             
+            // 🎧 Build music payload (support both Spotify and Apple Music)
             const musicPayload = {
-                preview_url: musicTrack.previewUrl,
-                song_title: musicTrack.trackName,
-                artist: musicTrack.artistName,
-                apple_music_url: musicTrack.trackViewUrl
+                preview_url: musicTrack.previewUrl || musicTrack.audio || musicTrack.preview_url,
+                isrc: musicTrack.isrc || '',
+                song_title: musicTrack.trackName || musicTrack.name,
+                artist: musicTrack.artistName || musicTrack.artist
             };
+            
+            // 🎵 Add music URL (Spotify or Apple Music)
+            if (musicTrack.spotify_url || musicTrack.spotifyUrl) {
+                musicPayload.spotify_url = musicTrack.spotify_url || musicTrack.spotifyUrl;
+            } else if (musicTrack.apple_music_url || musicTrack.appleMusicUrl || musicTrack.trackViewUrl) {
+                musicPayload.apple_music_url = musicTrack.apple_music_url || musicTrack.appleMusicUrl || musicTrack.trackViewUrl;
+            }
             
             overlays.push({
                 data: {
                     text: caption,
-                    text_color: hexToRGBA(overlayOptions.text_color || '#FFFFFF', 0.9),
+                    text_color: "#FFFFFFFF", // 🔧 FIX: 100% opacity for clear text
                     type: "music",
-                    max_lines: 1,
+                    max_lines: {
+                        "@type": "type.googleapis.com/google.protobuf.Int64Value",
+                        value: "1"
+                    }, // 🔧 FIX: Must wrap in object (protobuf format)
                     payload: musicPayload,
-                    icon: { type: "image", data: musicTrack.artworkUrl, source: "url" },
+                    icon: { 
+                        type: "image", 
+                        data: musicTrack.artworkUrl || musicTrack.image || musicTrack.artworkUrl100, 
+                        source: "url" 
+                    },
                     background: {
                         material_blur: "ultra_thin",
                         colors: [
                             hexToRGBA(overlayOptions.color_top || '#FF6B81', 0.9),
                             hexToRGBA(overlayOptions.color_bottom || '#FF9A76', 0.9)
-                        ]
+                        ] // 🔧 FIX: Must have 2 colors (not empty array!)
                     }
                 },
                 alt_text: caption,
@@ -234,20 +249,26 @@ const postImage = async (userId, idToken, image, overlayOptions) => {
                 return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}${alphaHex}`.toUpperCase();
             };
             
-            const hasCustomColors = overlayOptions.color_top !== '#000000' || overlayOptions.color_bottom !== '#000000';
+            // 🔧 FIX: Always provide colors, even if black (empty array causes rejection)
+            const colorTop = overlayOptions.color_top || '#000000';
+            const colorBottom = overlayOptions.color_bottom || '#000000';
+            const textColor = overlayOptions.text_color || '#FFFFFF';
             
             overlays.push({
                 data: {
                     text: caption,
-                    text_color: hexToRGBA(overlayOptions.text_color || '#FFFFFF', 0.9),
+                    text_color: hexToRGBA(textColor, 1.0), // 🔧 FIX: Use 1.0 alpha for text
                     type: "default",
-                    max_lines: 4,
+                    max_lines: {
+                        "@type": "type.googleapis.com/google.protobuf.Int64Value",
+                        value: "4"
+                    }, // 🔧 FIX: Wrap in object with @type
                     background: {
                         material_blur: "ultra_thin",
-                        colors: hasCustomColors ? [
-                            hexToRGBA(overlayOptions.color_top, 0.9),
-                            hexToRGBA(overlayOptions.color_bottom, 0.9)
-                        ] : []
+                        colors: [
+                            hexToRGBA(colorTop, 0.9),
+                            hexToRGBA(colorBottom, 0.9)
+                        ] // 🔧 FIX: Always include colors array
                     }
                 },
                 alt_text: caption,
