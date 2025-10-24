@@ -246,16 +246,32 @@ const postImage = async (userId, idToken, image, overlayOptions) => {
                 return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}${alphaHex}`.toUpperCase();
             };
             
-            // ✅ Default caption overlay (ĐÚNG THEO CODE MẪU)
+            // Get color options from Customize Studio
+            const colorTop = overlayOptions?.color_top || '#000000';
+            const colorBottom = overlayOptions?.color_bottom || '#000000';
+            const textColor = overlayOptions?.text_color || '#FFFFFF';
+            
+            // Check if user selected custom colors (not default black)
+            const hasCustomColors = (colorTop !== '#000000' || colorBottom !== '#000000');
+            
+            // Convert to RGBA
+            const colorTopRGBA = hexToRGBA(colorTop, 0.9);
+            const colorBottomRGBA = hexToRGBA(colorBottom, 0.9);
+            const textColorRGBA = hexToRGBA(textColor, 1.0);
+            
+            // Build colors array
+            const colorsArray = hasCustomColors ? [colorTopRGBA, colorBottomRGBA] : [];
+            
+            // ✅ Caption overlay with custom colors support
             overlays.push({
                 data: {
                     text: caption,
-                    text_color: "#FFFFFFE6", // ✅ Đúng code mẫu (90%)
+                    text_color: textColorRGBA, // ✅ Use custom text color
                     type: "default",
                     max_lines: 4, // ✅ Đúng code mẫu (raw number)
                     background: {
                         material_blur: "ultra_thin",
-                        colors: [] // ✅ Đúng code mẫu (empty array)
+                        colors: colorsArray // ✅ Use custom colors or empty array
                     }
                 },
                 alt_text: caption,
@@ -405,12 +421,108 @@ const uploadVideoToFirebaseStorage = async (userId, idToken, video, mimeType = '
     }
 };
 
-const postVideoToLocket = async (idToken, videoUrl, thumbnailUrl, caption) => {
+const postVideoToLocket = async (idToken, videoUrl, thumbnailUrl, overlayOptions) => {
     try {
+        // Extract caption from overlayOptions
+        const caption = overlayOptions?.caption || overlayOptions || '';
+        const musicTrack = overlayOptions?.music_track;
+        
+        logInfo("postVideoToLocket", "Start");
+        if (musicTrack) {
+            logInfo("postVideoToLocket", `Video with music: ${musicTrack.trackName || musicTrack.name}`);
+        }
+        
         const postHeaders = {
             "content-type": "application/json",
             authorization: `Bearer ${idToken}`,
         };
+
+        // Build overlays array (same logic as postImage)
+        const overlays = [];
+        
+        // Add music overlay if present
+        if (musicTrack) {
+            const musicPayload = {
+                preview_url: musicTrack.previewUrl || musicTrack.audio || musicTrack.preview_url,
+                isrc: musicTrack.isrc || '',
+                song_title: musicTrack.trackName || musicTrack.name,
+                artist: musicTrack.artistName || musicTrack.artist
+            };
+            
+            // 🎵 Chỉ thêm khi có giá trị (theo code mẫu)
+            if (musicTrack.spotify_url || musicTrack.spotifyUrl) {
+                musicPayload.spotify_url = musicTrack.spotify_url || musicTrack.spotifyUrl;
+                logInfo("postVideoToLocket", "Using Spotify URL");
+            } else if (musicTrack.apple_music_url || musicTrack.appleMusicUrl) {
+                // ✅ ĐÚNG: Dùng apple_music_url từ frontend (đã set = previewUrl)
+                musicPayload.apple_music_url = musicTrack.apple_music_url || musicTrack.appleMusicUrl;
+                logInfo("postVideoToLocket", "Using Apple Music URL: " + musicPayload.apple_music_url);
+            }
+            
+            overlays.push({
+                data: {
+                    text: caption,
+                    text_color: "#FFFFFFE6", // ✅ Đúng code mẫu (90%)
+                    type: "music",
+                    max_lines: 1, // ✅ Đúng code mẫu (raw number)
+                    payload: musicPayload,
+                    icon: { 
+                        type: "image", 
+                        data: musicTrack.artworkUrl || musicTrack.image || musicTrack.artworkUrl100, 
+                        source: "url" 
+                    },
+                    background: {
+                        material_blur: "ultra_thin",
+                        colors: [] // ✅ Đúng code mẫu (empty array)
+                    }
+                },
+                alt_text: caption,
+                overlay_id: "caption:music",
+                overlay_type: "caption"
+            });
+        } else {
+            // Default caption overlay with custom colors support
+            const hexToRGBA = (hex, alpha = 1.0) => {
+                hex = hex.replace('#', '');
+                const r = parseInt(hex.substr(0, 2), 16);
+                const g = parseInt(hex.substr(2, 2), 16);
+                const b = parseInt(hex.substr(4, 2), 16);
+                const alphaHex = Math.round(alpha * 255).toString(16).padStart(2, '0');
+                return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}${alphaHex}`.toUpperCase();
+            };
+            
+            // Get color options from Customize Studio
+            const colorTop = overlayOptions?.color_top || '#000000';
+            const colorBottom = overlayOptions?.color_bottom || '#000000';
+            const textColor = overlayOptions?.text_color || '#FFFFFF';
+            
+            // Check if user selected custom colors
+            const hasCustomColors = (colorTop !== '#000000' || colorBottom !== '#000000');
+            
+            // Convert to RGBA
+            const colorTopRGBA = hexToRGBA(colorTop, 0.9);
+            const colorBottomRGBA = hexToRGBA(colorBottom, 0.9);
+            const textColorRGBA = hexToRGBA(textColor, 1.0);
+            
+            // Build colors array
+            const colorsArray = hasCustomColors ? [colorTopRGBA, colorBottomRGBA] : [];
+            
+            overlays.push({
+                data: {
+                    text: caption,
+                    text_color: textColorRGBA, // ✅ Use custom text color
+                    type: "default",
+                    max_lines: 4, // ✅ Đúng code mẫu (raw number)
+                    background: {
+                        material_blur: "ultra_thin",
+                        colors: colorsArray // ✅ Use custom colors or empty array
+                    }
+                },
+                alt_text: caption,
+                overlay_id: "caption:default",
+                overlay_type: "caption"
+            });
+        }
 
         const data = {
             data: {
@@ -486,27 +598,7 @@ const postVideoToLocket = async (idToken, videoUrl, thumbnailUrl, caption) => {
                 },
                 sent_to_all: true,
                 caption: caption,
-                overlays: [
-                    {
-                        data: {
-                            text: caption,
-                            text_color: "#FFFFFFE6",
-                            type: "standard",
-                            max_lines: {
-                                "@type":
-                                    "type.googleapis.com/google.protobuf.Int64Value",
-                                value: "4",
-                            },
-                            background: {
-                                material_blur: "ultra_thin",
-                                colors: [],
-                            },
-                        },
-                        alt_text: caption,
-                        overlay_id: "caption:standard",
-                        overlay_type: "caption",
-                    },
-                ],
+                overlays: overlays
             },
         };
 
@@ -520,18 +612,21 @@ const postVideoToLocket = async (idToken, videoUrl, thumbnailUrl, caption) => {
             throw new Error(`Failed to create post: ${response.statusText}`);
         }
 
-        logInfo("postVideoToLocket", "End");
+        logInfo("postVideoToLocket", "End - Video posted successfully" + (musicTrack ? " with music" : ""));
     } catch (error) {
         logError("postVideoToLocket", error.message);
         throw error;
     }
 };
 
-const postVideo = async (userId, idToken, video, caption) => {
+const postVideo = async (userId, idToken, video, overlayOptions) => {
     let convertedPath = null;
     
     try {
         logInfo("postVideo", "Start");
+        
+        // Extract caption from overlayOptions for backward compatibility
+        const caption = overlayOptions?.caption || overlayOptions || '';
         
         // ✨ Get video mime type from uploaded file
         const videoMimeType = video.mimetype || 'video/mp4';
@@ -619,7 +714,7 @@ const postVideo = async (userId, idToken, video, caption) => {
             throw new Error("Failed to upload video");
         }
 
-        await postVideoToLocket(idToken, videoUrl, thumbnailUrl, caption);
+        await postVideoToLocket(idToken, videoUrl, thumbnailUrl, overlayOptions);
 
         logInfo("postVideo", "End");
         
