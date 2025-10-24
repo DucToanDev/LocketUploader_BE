@@ -80,6 +80,8 @@ const uploadImageToFirebaseStorage = async (userId, idToken, image) => {
             metadata: { creator: userId, visibility: "private" },
         });
 
+        logInfo("uploadImageToFirebaseStorage", `Initiating upload for ${imageName}, size: ${image.size || image.length} bytes`);
+        
         const response = await fetch(url, {
             method: "POST",
             headers: initHeaders,
@@ -87,10 +89,15 @@ const uploadImageToFirebaseStorage = async (userId, idToken, image) => {
         });
 
         if (!response.ok) {
-            throw new Error(`Failed to start upload: ${response.statusText}`);
+            const errorText = await response.text();
+            logError("uploadImageToFirebaseStorage", `Init failed (${response.status}): ${errorText}`);
+            throw new Error(`Failed to start upload: ${response.status} ${response.statusText} - ${errorText}`);
         }
 
         const uploadUrl = response.headers.get("X-Goog-Upload-URL");
+        if (!uploadUrl) {
+            throw new Error("No upload URL received from Firebase");
+        }
 
         // Bước 2: Tải dữ liệu hình ảnh lên thông qua URL resumable trả về từ bước 1
         let imageBuffer;
@@ -100,6 +107,8 @@ const uploadImageToFirebaseStorage = async (userId, idToken, image) => {
             imageBuffer = fs.readFileSync(image.path);
         }
 
+        logInfo("uploadImageToFirebaseStorage", `Uploading ${(imageBuffer.length / 1024).toFixed(2)} KB to Firebase`);
+
         let uploadResponse = await fetch(uploadUrl, {
             method: "PUT",
             headers: constants.UPLOADER_HEADERS,
@@ -107,8 +116,18 @@ const uploadImageToFirebaseStorage = async (userId, idToken, image) => {
         });
 
         if (!uploadResponse.ok) {
+            const errorText = await uploadResponse.text();
+            logError("uploadImageToFirebaseStorage", `Upload failed (${uploadResponse.status}): ${errorText}`);
+            
+            // 🔧 FIX: Better error message for Forbidden
+            if (uploadResponse.status === 403) {
+                throw new Error(
+                    `Upload forbidden - Token may be expired or invalid. Please try logging in again. (HTTP 403)`
+                );
+            }
+            
             throw new Error(
-                `Failed to upload image: ${uploadResponse.statusText}`
+                `Failed to upload image: ${uploadResponse.status} ${uploadResponse.statusText} - ${errorText}`
             );
         }
 
