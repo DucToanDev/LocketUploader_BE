@@ -542,83 +542,17 @@ const postVideoToLocket = async (idToken, videoUrl, thumbnailUrl, overlayOptions
             });
         }
 
+        // ✅ SIMPLIFIED PAYLOAD - Match PHP structure (working)
         const data = {
             data: {
                 thumbnail_url: thumbnailUrl,
                 video_url: videoUrl,
-                md5: getMd5Hash(videoUrl),
-                recipients: [],
-                analytics: {
-                    experiments: {
-                        flag_4: {
-                            "@type":
-                                "type.googleapis.com/google.protobuf.Int64Value",
-                            value: "43",
-                        },
-                        flag_10: {
-                            "@type":
-                                "type.googleapis.com/google.protobuf.Int64Value",
-                            value: "505",
-                        },
-                        flag_23: {
-                            "@type":
-                                "type.googleapis.com/google.protobuf.Int64Value",
-                            value: "400",
-                        },
-                        flag_22: {
-                            "@type":
-                                "type.googleapis.com/google.protobuf.Int64Value",
-                            value: "1203",
-                        },
-                        flag_19: {
-                            "@type":
-                                "type.googleapis.com/google.protobuf.Int64Value",
-                            value: "52",
-                        },
-                        flag_18: {
-                            "@type":
-                                "type.googleapis.com/google.protobuf.Int64Value",
-                            value: "1203",
-                        },
-                        flag_16: {
-                            "@type":
-                                "type.googleapis.com/google.protobuf.Int64Value",
-                            value: "303",
-                        },
-                        flag_15: {
-                            "@type":
-                                "type.googleapis.com/google.protobuf.Int64Value",
-                            value: "501",
-                        },
-                        flag_14: {
-                            "@type":
-                                "type.googleapis.com/google.protobuf.Int64Value",
-                            value: "500",
-                        },
-                        flag_25: {
-                            "@type":
-                                "type.googleapis.com/google.protobuf.Int64Value",
-                            value: "23",
-                        },
-                    },
-                    amplitude: {
-                        device_id: "BF5D1FD7-9E4D-4F8B-AB68-B89ED20398A6",
-                        session_id: {
-                            value: "1722437166613",
-                            "@type":
-                                "type.googleapis.com/google.protobuf.Int64Value",
-                        },
-                    },
-                    google_analytics: {
-                        app_instance_id: "5BDC04DA16FF4B0C9CA14FFB9C502900",
-                    },
-                    platform: "ios",
-                },
                 sent_to_all: true,
-                caption: caption,
                 overlays: overlays
             },
         };
+        
+        logInfo("postVideoToLocket", "✅ Using SIMPLIFIED payload (matching PHP structure)");
 
         // 🔍 DEBUG: Log full payload before sending to Locket API
         logInfo("postVideoToLocket", "📦 FULL PAYLOAD to Locket API:");
@@ -631,9 +565,15 @@ const postVideoToLocket = async (idToken, videoUrl, thumbnailUrl, overlayOptions
         });
 
         if (!response.ok) {
+            const errorText = await response.text();
+            logError("postVideoToLocket", `HTTP ${response.status}: ${errorText}`);
             throw new Error(`Failed to create post: ${response.statusText}`);
         }
 
+        const responseData = await response.json();
+        logInfo("postVideoToLocket", "✅ Locket API Response:");
+        logInfo("postVideoToLocket", JSON.stringify(responseData, null, 2));
+        
         logInfo("postVideoToLocket", "End - Video posted successfully" + (musicTrack ? " with music" : ""));
     } catch (error) {
         logError("postVideoToLocket", error.message);
