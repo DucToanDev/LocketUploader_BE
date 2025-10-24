@@ -469,7 +469,10 @@ const postVideoToLocket = async (idToken, videoUrl, thumbnailUrl, overlayOptions
                 logInfo("postVideoToLocket", "Using Apple Music URL: " + musicPayload.apple_music_url);
             }
             
-            overlays.push({
+            logInfo("postVideoToLocket", "🎵 Music Payload:");
+            logInfo("postVideoToLocket", JSON.stringify(musicPayload, null, 2));
+            
+            const musicOverlay = {
                 data: {
                     text: caption,
                     text_color: "#FFFFFFE6", // ✅ Đúng code mẫu (90%)
@@ -489,7 +492,12 @@ const postVideoToLocket = async (idToken, videoUrl, thumbnailUrl, overlayOptions
                 alt_text: caption,
                 overlay_id: "caption:music",
                 overlay_type: "caption"
-            });
+            };
+            
+            logInfo("postVideoToLocket", "🎵 Music Overlay:");
+            logInfo("postVideoToLocket", JSON.stringify(musicOverlay, null, 2));
+            
+            overlays.push(musicOverlay);
         } else {
             // Default caption overlay with custom colors support
             const hexToRGBA = (hex, alpha = 1.0) => {
@@ -612,6 +620,10 @@ const postVideoToLocket = async (idToken, videoUrl, thumbnailUrl, overlayOptions
             },
         };
 
+        // 🔍 DEBUG: Log full payload before sending to Locket API
+        logInfo("postVideoToLocket", "📦 FULL PAYLOAD to Locket API:");
+        logInfo("postVideoToLocket", JSON.stringify(data, null, 2));
+        
         const response = await fetch(constants.CREATE_POST_URL, {
             method: "POST",
             headers: postHeaders,
