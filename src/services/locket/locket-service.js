@@ -196,7 +196,7 @@ const postImage = async (userId, idToken, image, overlayOptions) => {
                 return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}${alphaHex}`.toUpperCase();
             };
             
-            // 🎧 Build music payload (support both Spotify and Apple Music)
+            // 🎧 Build music payload (ĐÚNG THEO CODE MẪU)
             const musicPayload = {
                 preview_url: musicTrack.previewUrl || musicTrack.audio || musicTrack.preview_url,
                 isrc: musicTrack.isrc || '',
@@ -204,22 +204,22 @@ const postImage = async (userId, idToken, image, overlayOptions) => {
                 artist: musicTrack.artistName || musicTrack.artist
             };
             
-            // 🎵 Add music URL (Spotify or Apple Music)
+            // 🎵 Add music URL - Ưu tiên Spotify, fallback Apple Music
             if (musicTrack.spotify_url || musicTrack.spotifyUrl) {
                 musicPayload.spotify_url = musicTrack.spotify_url || musicTrack.spotifyUrl;
-            } else if (musicTrack.apple_music_url || musicTrack.appleMusicUrl || musicTrack.trackViewUrl) {
-                musicPayload.apple_music_url = musicTrack.apple_music_url || musicTrack.appleMusicUrl || musicTrack.trackViewUrl;
+                logInfo("postImage", "Using Spotify URL");
+            } else if (musicTrack.trackViewUrl || musicTrack.apple_music_url || musicTrack.appleMusicUrl) {
+                // ✅ Ưu tiên trackViewUrl (từ iTunes Search API)
+                musicPayload.apple_music_url = musicTrack.trackViewUrl || musicTrack.apple_music_url || musicTrack.appleMusicUrl;
+                logInfo("postImage", "Using Apple Music URL: " + musicPayload.apple_music_url);
             }
             
             overlays.push({
                 data: {
                     text: caption,
-                    text_color: "#FFFFFFFF", // 🔧 FIX: 100% opacity for clear text
+                    text_color: "#FFFFFFE6", // ✅ Đúng code mẫu (90%)
                     type: "music",
-                    max_lines: {
-                        "@type": "type.googleapis.com/google.protobuf.Int64Value",
-                        value: "1"
-                    }, // 🔧 FIX: Must wrap in object (protobuf format)
+                    max_lines: 1, // ✅ Đúng code mẫu (raw number)
                     payload: musicPayload,
                     icon: { 
                         type: "image", 
@@ -228,10 +228,7 @@ const postImage = async (userId, idToken, image, overlayOptions) => {
                     },
                     background: {
                         material_blur: "ultra_thin",
-                        colors: [
-                            hexToRGBA(overlayOptions.color_top || '#FF6B81', 0.9),
-                            hexToRGBA(overlayOptions.color_bottom || '#FF9A76', 0.9)
-                        ] // 🔧 FIX: Must have 2 colors (not empty array!)
+                        colors: [] // ✅ Đúng code mẫu (empty array)
                     }
                 },
                 alt_text: caption,
@@ -249,26 +246,16 @@ const postImage = async (userId, idToken, image, overlayOptions) => {
                 return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}${alphaHex}`.toUpperCase();
             };
             
-            // 🔧 FIX: Always provide colors, even if black (empty array causes rejection)
-            const colorTop = overlayOptions.color_top || '#000000';
-            const colorBottom = overlayOptions.color_bottom || '#000000';
-            const textColor = overlayOptions.text_color || '#FFFFFF';
-            
+            // ✅ Default caption overlay (ĐÚNG THEO CODE MẪU)
             overlays.push({
                 data: {
                     text: caption,
-                    text_color: hexToRGBA(textColor, 1.0), // 🔧 FIX: Use 1.0 alpha for text
+                    text_color: "#FFFFFFE6", // ✅ Đúng code mẫu (90%)
                     type: "default",
-                    max_lines: {
-                        "@type": "type.googleapis.com/google.protobuf.Int64Value",
-                        value: "4"
-                    }, // 🔧 FIX: Wrap in object with @type
+                    max_lines: 4, // ✅ Đúng code mẫu (raw number)
                     background: {
                         material_blur: "ultra_thin",
-                        colors: [
-                            hexToRGBA(colorTop, 0.9),
-                            hexToRGBA(colorBottom, 0.9)
-                        ] // 🔧 FIX: Always include colors array
+                        colors: [] // ✅ Đúng code mẫu (empty array)
                     }
                 },
                 alt_text: caption,
